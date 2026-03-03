@@ -1,0 +1,24 @@
+name: rituals_sae
+
+profile: rituals_sae
+
+seed-paths: ["seeds"]
+model-paths: ["models"]
+macro-paths: ["macros"]
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+seeds:
+  # Builds seeds into '<your_schema_name>_raw'
+  rituals_sae:
+    +schema: raw
+
+models:
+  rituals_sae:
+    +static_analysis: strict
+    # Materialize staging models as views, and marts as tables
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

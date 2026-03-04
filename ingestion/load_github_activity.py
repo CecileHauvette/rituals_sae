@@ -1,6 +1,5 @@
 
 
-import json
 import logging
 import os
 import time
@@ -84,10 +83,10 @@ def gh_paginate(path, params=None, stop_before=None):
                 page = [
                     i for i in page
                     if (
-                        i.get("updated_at", "9999") > stop_before
+                        i.get("updated_at", "") > stop_before
                         or (i.get("commit") or {})
                         .get("committer", {})
-                        .get("date", "9999") > stop_before
+                        .get("date", "") > stop_before
                     )
                 ]
                 items.extend(page)
@@ -134,8 +133,10 @@ def ensure_dataset(bq):
         bq.get_dataset(ref)
         log.info(f"Dataset {GCP_PROJECT}.{BQ_DATASET} already exists — ok.")
     except Exception:
-        bq.create_dataset(ref)
-        log.info(f"Created dataset {GCP_PROJECT}.{BQ_DATASET}.")
+        dataset = bigquery.Dataset(ref)
+        dataset.location = "EU"
+        bq.create_dataset(dataset)
+        log.info(f"Created dataset {GCP_PROJECT}.{BQ_DATASET} in EU.")
 
 
 def append_to_bq(bq, rows, table_name):
@@ -154,6 +155,13 @@ def append_to_bq(bq, rows, table_name):
         write_disposition  = bigquery.WriteDisposition.WRITE_APPEND,
         # CREATE_IF_NEEDED: first run creates the table, subsequent runs append
         create_disposition = bigquery.CreateDisposition.CREATE_IF_NEEDED,
+        # Partition by load date so incremental dbt models scan only recent partitions
+        time_partitioning  = bigquery.TimePartitioning(
+            type_  = bigquery.TimePartitioningType.DAY,
+            field  = "loaded_at",
+        ),
+        # Cluster by record_id to speed up deduplication queries in dbt
+        clustering_fields  = ["record_id"],
     )
 
     job = bq.load_table_from_json(rows, table_ref, job_config=job_config)
@@ -165,7 +173,7 @@ def make_row(github_id, payload, batch_id, loaded_at):
     """Package one GitHub API object into the standard row format."""
     return {
         "record_id": str(github_id),
-        "data":      json.dumps(payload, ensure_ascii=False),
+        "data":      payload,
         "loaded_at": loaded_at,
         "batch_id":  batch_id,
     }
@@ -182,7 +190,7 @@ def get_watermark(bq, table_name, json_path):
     table_ref = f"{GCP_PROJECT}.{BQ_DATASET}.{table_name}"
     try:
         row = next(iter(bq.query(
-            f"SELECT MAX(JSON_VALUE(PARSE_JSON(JSON_VALUE(data, '$')), '$.{json_path}')) AS max_ts FROM `{table_ref}`",
+            f"SELECT MAX(JSON_VALUE(data, '$.{json_path}')) AS max_ts FROM `{table_ref}`",
             job_config=bigquery.QueryJobConfig(use_query_cache=False),
         ).result()))
         if row["max_ts"]:

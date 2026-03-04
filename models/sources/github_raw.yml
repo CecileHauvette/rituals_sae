@@ -1,0 +1,81 @@
+sources:
+  - name: github_raw
+    description: >
+      Raw GitHub API payloads for the dbt-labs/dbt-core repository
+    database: rituals-case
+    schema: github_raw
+    tables:
+      - name: raw_commits
+        identifier: raw_commits
+        description: >
+          One row per commit ingested. 
+        columns:
+          - name: record_id
+            description: commit identifier. can have multiple rows per commit as the same commit can be ingested multiple times across script runs
+            tests:
+              - not_null
+          - name: data
+            description: Full JSON payload from the GitHub Commits API.
+            tests:
+              - not_null
+          - name: loaded_at
+            description: UTC timestamp when this row was written by the ingestion script.
+            tests:
+              - not_null
+          - name: batch_id
+            description: UUID identifying the script run that produced this row.
+            tests:
+              - not_null
+
+      - name: raw_pull_requests
+        identifier: raw_pull_requests
+        description: >
+          One row per (PR, ingestion run) snapshot. Because the table uses
+          WRITE_APPEND, the same PR id can appear multiple times as its state
+          evolves; dbt staging models deduplicate by record_id keeping the
+          latest snapshot.
+        columns:
+          - name: record_id
+            description: >
+              GitHub PR numeric id — unique within the repo. Not unique in this
+              table (multiple snapshots per PR); use with loaded_at to get
+              current state.
+            tests:
+              - not_null
+          - name: data
+            description: Full JSON payload from the GitHub Pull Requests API.
+            tests:
+              - not_null
+          - name: loaded_at
+            description: UTC timestamp when this row was written by the ingestion script.
+            tests:
+              - not_null
+          - name: batch_id
+            description: UUID identifying the script run that produced this row.
+            tests:
+              - not_null
+
+      - name: raw_issues
+        description: >
+          One row per (issue, ingestion run) snapshot. GitHub PRs are excluded
+          at ingestion time. Same append-and-deduplicate pattern as
+          raw_pull_requests.
+        columns:
+          - name: record_id
+            description: >
+              GitHub issue numeric id — unique within the repo. Not unique in
+              this table (multiple snapshots per issue).
+            tests:
+              - not_null
+          - name: data
+            description: Full JSON payload from the GitHub Issues API.
+            tests:
+              - not_null
+          - name: loaded_at
+            description: UTC timestamp when this row was written by the ingestion script.
+            tests:
+              - not_null
+          - name: batch_id
+            description: UUID identifying the script run that produced this row.
+            tests:
+              - not_null

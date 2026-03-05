@@ -1,0 +1,100 @@
+models:
+  - name: stg_github_commits
+    description: >
+      One row per commit in the dbt-core repository. 
+    columns:
+      - name: commit_sha
+        description: Git commit SHA — the unique identifier for this commit.
+        tests:
+          - not_null
+          - unique
+      - name: authored_at
+        description: >
+          When the developer ran `git commit` locally.
+      - name: author_login
+        description: GitHub username of the commit author.
+      - name: author_id
+        description: GitHub numeric user ID of the commit author.
+      - name: is_merge_commit
+        description: >
+          True when the commit has more than one parent. Identifies merge commits
+          as opposed to regular commits or squash-merged PR commits.
+      - name: is_bot
+        description: >
+          True when the author is a GitHub App (user.type = 'Bot') or the login
+          contains 'bot'.
+
+  - name: stg_github_pull_requests
+    description: >
+      One row per pull request (PR) in the dbt-core repository.
+    columns:
+      - name: pr_number
+        description: GitHub PR number — unique identifier.
+        tests:
+          - not_null
+          - unique
+      - name: created_at
+        description: When the PR was opened.
+      - name: updated_at
+        description: When the PR was last updated.
+      - name: closed_at
+        description: When the PR was closed (merged or abandoned). Null if still open.
+      - name: merged_at
+        description: >
+          When the PR was merged. Null if closed without merging or still open.
+      - name: merge_commit_sha
+        description: >
+          SHA of the merge commit created when the PR was merged. 
+      - name: author_login
+        description: GitHub username of the PR author.
+      - name: author_id
+        description: GitHub numeric user ID of the PR author.
+      - name: is_bot
+        description: >
+          True when the author is a GitHub App (user.type = 'Bot') or the login
+          contains 'bot'.
+      - name: state
+        description: Current PR state — 'open' or 'closed'.
+      - name: is_draft
+        description: True when the PR is in draft state.
+      - name: commit_count
+        description: Number of commits in the PR.
+      - name: lines_added
+        description: Total lines added across all files in the PR.
+      - name: lines_deleted
+        description: Total lines deleted across all files in the PR.
+      - name: files_changed
+        description: Number of files modified in the PR.
+
+  - name: stg_github_issues
+    description: >
+      One row per issue in the dbt-core repository.
+    columns:
+      - name: issue_number
+        description: GitHub issue number — unique identifier.
+        tests:
+          - not_null
+          - unique
+      - name: title
+        description: Issue title.
+      - name: state
+        description: Current issue state — 'open' or 'closed'.
+      - name: created_at
+        description: When the issue was opened.
+      - name: closed_at
+        description: When the issue was closed. Null if still open.
+      - name: updated_at
+        description: When the issue was last updated.
+      - name: author_login
+        description: GitHub username of the issue author.
+      - name: author_id
+        description: GitHub numeric user ID of the issue author.
+      - name: is_bot
+        description: >
+          True when the author is a GitHub App (user.type = 'Bot') or the login
+          contains 'bot'.
+      - name: comment_count
+        description: Number of comments on the issue.
+      - name: labels
+        description: >
+          JSON array of label objects.

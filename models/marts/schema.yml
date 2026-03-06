@@ -1,0 +1,47 @@
+models:
+  - name: dim_contributors
+    description: >
+      One row per unique GitHub contributor, identified by their GitHub user ID.
+
+    columns:
+      - name: author_id
+        description: GitHub numeric user ID
+        tests:
+          - not_null
+          - unique
+      - name: author_login
+        description: GitHub username at the time of the most recent contribution.
+        tests:
+          - not_null
+      - name: is_bot
+        description: >
+          True if any contribution from this author was flagged as a bot.
+      - name: first_contribution_date
+        description: Timestamp of the earliest contribution (commit or PR) by this contributor.
+        tests:
+          - not_null
+
+  - name: mart_issues_monthly
+    description: >
+      Monthly counts of issues opened and closed, with closed-to-opened ratio and month-over-month change.
+      Excludes bot activity. Filtered to 2023 onwards where data is complete.
+      Grain: one row per calendar month.
+
+    columns:
+      - name: month
+        description: First day of the month (timestamp truncated to month).
+        tests:
+          - not_null
+          - unique
+      - name: opened_count
+        description: Number of issues opened by humans during the month.
+      - name: closed_count
+        description: Number of issues closed by humans during the month.
+      - name: closed_to_opened_ratio
+        description: >
+          Ratio of closed to opened issues. Above 1 means more issues closed than opened (backlog shrinking).
+          Null if no issues were opened that month.
+      - name: ratio_mom_change
+        description: >
+          Month-over-month change in closed_to_opened_ratio. Positive means improving, negative means degrading.
+          Null for the first month in the dataset.

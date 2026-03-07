@@ -16,16 +16,21 @@ models:
       - name: is_bot
         description: >
           True if any contribution from this author was flagged as a bot.
-      - name: first_contribution_date
+      - name: first_contribution_at
         description: Timestamp of the earliest contribution (commit or PR) by this contributor.
         tests:
           - not_null
+      - name: last_contribution_at
+        description: Timestamp of the most recent contribution (commit or PR) by this contributor.
+        tests:
+          - not_null
+      - name: is_active
+        description: True if the contributor has contributed in the last 6 months.
 
-  - name: mart_issues_monthly
+  - name: fact_issues_monthly
     description: >
       Monthly counts of issues opened and closed, with closed-to-opened ratio and month-over-month change.
-      Excludes bot activity. Filtered to 2023 onwards where data is complete.
-      Grain: one row per calendar month.
+      Excludes bot activity.
 
     columns:
       - name: month
@@ -45,3 +50,27 @@ models:
         description: >
           Month-over-month change in closed_to_opened_ratio. Positive means improving, negative means degrading.
           Null for the first month in the dataset.
+
+  - name: mart_contributor_activity
+    description: One row per human contributor with aggregated PR and issue activity.
+
+    columns:
+      - name: author_id
+        description: GitHub numeric user ID.
+        tests:
+          - not_null
+          - unique
+      - name: author_login
+        description: GitHub username at the time of the most recent contribution.
+      - name: first_contribution_at
+        description: Timestamp of the earliest contribution (commit or PR).
+      - name: total_prs
+        description: Total number of non-draft pull requests opened by this contributor.
+      - name: merged_prs
+        description: Number of pull requests merged.
+      - name: merge_rate
+        description: Share of PRs that were merged. Null if no PRs.
+      - name: avg_cycle_time_hours
+        description: Average time in hours from PR creation to merge, for merged PRs only.
+      - name: total_issues_opened
+        description: Total number of issues opened by this contributor.

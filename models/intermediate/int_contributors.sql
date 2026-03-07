@@ -7,7 +7,7 @@ with commits as (
         author_login,
         author_id,
         is_bot,
-        authored_at as contribution_date
+        authored_at as contribution_at
     from {{ref('stg_github_commits')}}
 ),
 
@@ -16,22 +16,24 @@ pull_requests as (
         author_login,
         author_id,
         is_bot,
-        created_at as contribution_date
+        created_at as contribution_at
     from {{ref('stg_github_pull_requests')}}
 ),
 
 unioned as (
-    select author_login, author_id, is_bot, contribution_date from commits
+    select author_login, author_id, is_bot, contribution_at from commits
     union all
-    select author_login, author_id, is_bot, contribution_date from pull_requests
+    select author_login, author_id, is_bot, contribution_at from pull_requests
 )
 
 select
     author_id,
     -- keeps login name from most recent contribution:
-    array_agg(author_login order by contribution_date desc)[offset(0)] as author_login,
+    array_agg(author_login order by contribution_at desc)[offset(0)] as author_login,
     max(is_bot) as is_bot,
-    min(contribution_date) as first_contribution_date
+    min(contribution_at) as first_contribution_at,
+    max(contribution_at) as last_contribution_at,
+    date(max(contribution_at)) >= date_sub(current_date(), interval 6 month) as is_active
 from unioned
 where author_id is not null
-group by author_id
+group by all

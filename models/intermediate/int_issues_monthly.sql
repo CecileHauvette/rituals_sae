@@ -1,5 +1,7 @@
+{{ config(materialized='ephemeral') }}
+
 -- Monthly count of issues opened and closed, and their ratio.
--- Grain: month.
+-- Grain: one row per calendar month.
 
 -- Note: months with zero activity in both dimensions will not appear in results.
 -- Todo: use a calendar table to ensure all months appear.
@@ -8,19 +10,19 @@ with opened as (
     select
         timestamp_trunc(created_at, month) as month,
         count(*) as opened_count
-    from {{ref('fact_issues')}}
+    from {{ref('int_issues')}}
     where not is_bot
-    group by month
+    group by all
 ),
 
 closed as (
     select
         timestamp_trunc(closed_at, month) as month,
         count(*) as closed_count
-    from {{ref('fact_issues')}}
+    from {{ref('int_issues')}}
     where is_closed
     and not is_bot
-    group by month
+    group by all
 ),
 
 monthly as (
@@ -43,3 +45,4 @@ select
         as ratio_mom_change
 from monthly
 where month >= '2023-01-01'
+and month < timestamp_trunc(current_timestamp(), month)

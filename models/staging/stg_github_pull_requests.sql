@@ -15,7 +15,7 @@ select
     json_value(data, '$.user.login') as author_login,
     json_value(data, '$.user.id') as author_id,
     json_value(data, '$.user.type') = 'Bot'
-        or json_value(data, '$.user.login') like '%bot%' as is_bot,
+        or lower(json_value(data, '$.user.login')) like '%bot%' as is_bot,
     json_value(data, '$.state') as state,
     json_value(data, '$.draft') = 'true' as is_draft,
     json_value(data, '$.number') as pr_number,

@@ -17,7 +17,7 @@ select
     json_value(data, '$.user.login') as author_login,
     json_value(data, '$.user.id') as author_id,
     json_value(data, '$.user.type') = 'Bot'
-        or json_value(data, '$.user.login') like '%bot%' as is_bot,
+        or lower(json_value(data, '$.user.login')) like '%bot%' as is_bot,
     cast(json_value(data, '$.comments') as int64) as comment_count,
     json_query(data, '$.labels') as labels
 from source

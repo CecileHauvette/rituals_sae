@@ -1,5 +1,3 @@
-{{ config(materialized='ephemeral') }}
-
 -- One row per issue, enriched with resolution status and time.
 -- Grain: issue_number (unique).
 

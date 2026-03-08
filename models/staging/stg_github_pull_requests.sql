@@ -21,7 +21,5 @@ select
     json_value(data, '$.number') as pr_number,
     json_value(data, '$.merge_commit_sha') as merge_commit_sha,
     cast(json_value(data, '$.commits') as int64) as commit_count,
-    cast(json_value(data, '$.additions') as int64) as lines_added,
-    cast(json_value(data, '$.deletions') as int64) as lines_deleted,
-    cast(json_value(data, '$.changed_files') as int64) as files_changed
+    *
 from source

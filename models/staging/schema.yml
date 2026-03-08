@@ -59,12 +59,7 @@ models:
         description: True when the PR is in draft state.
       - name: commit_count
         description: Number of commits in the PR.
-      - name: lines_added
-        description: Total lines added across all files in the PR.
-      - name: lines_deleted
-        description: Total lines deleted across all files in the PR.
-      - name: files_changed
-        description: Number of files modified in the PR.
+
 
   - name: stg_github_issues
     description: >

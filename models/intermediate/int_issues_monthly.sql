@@ -44,5 +44,5 @@ select
         - lag(closed_to_opened_ratio) over (order by month)
         as ratio_mom_change
 from monthly
-where month >= '2023-01-01'
+where month >= '{{ var("start_date") }}'
 and month < timestamp_trunc(current_timestamp(), month)

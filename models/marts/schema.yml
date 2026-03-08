@@ -1,11 +1,9 @@
 models:
   - name: dim_contributors
-    description: >
-      One row per unique GitHub contributor, identified by their GitHub user ID.
-
+    description: One row per unique GitHub contributor, identified by their GitHub user ID.
     columns:
       - name: author_id
-        description: GitHub numeric user ID
+        description: GitHub numeric user ID.
         tests:
           - not_null
           - unique
@@ -14,46 +12,119 @@ models:
         tests:
           - not_null
       - name: is_bot
-        description: >
-          True if any contribution from this author was flagged as a bot.
+        description: True if the contributor was flagged as a bot.
       - name: first_contribution_at
-        description: Timestamp of the earliest contribution (commit or PR) by this contributor.
+        description: Timestamp of the earliest contribution (commit or PR).
         tests:
           - not_null
       - name: last_contribution_at
-        description: Timestamp of the most recent contribution (commit or PR) by this contributor.
+        description: Timestamp of the most recent contribution (commit or PR).
         tests:
           - not_null
       - name: is_active
         description: True if the contributor has contributed in the last 6 months.
 
-  - name: fact_issues_monthly
-    description: >
-      Monthly counts of issues opened and closed, with closed-to-opened ratio and month-over-month change.
-      Excludes bot activity.
+  - name: fact_pull_requests
+    description: One row per pull request.
+    columns:
+      - name: pr_number
+        description: GitHub pull request number.
+        tests:
+          - not_null
+          - unique
+      - name: author_id
+        description: GitHub numeric user ID of the PR author.
+      - name: is_bot
+        description: True if the author was flagged as a bot.
+      - name: is_draft
+        description: True if the PR was in draft state when created.
+      - name: state
+        description: Current state of the PR (open, closed).
+      - name: created_at
+        description: Timestamp when the PR was opened.
+      - name: merged_at
+        description: Timestamp when the PR was merged. Null if not merged.
+      - name: is_merged
+        description: True if the PR was merged.
+      - name: cycle_time_hours
+        description: Hours from PR creation to merge. Null if not merged.
+      - name: commit_count
+        description: Number of commits in the PR.
 
+  - name: fact_issues
+    description: One row per issue.
+    columns:
+      - name: issue_number
+        description: GitHub issue number.
+        tests:
+          - not_null
+          - unique
+      - name: author_id
+        description: GitHub numeric user ID of the issue author.
+      - name: is_bot
+        description: True if the author was flagged as a bot.
+      - name: state
+        description: Current state of the issue (open, closed).
+      - name: created_at
+        description: Timestamp when the issue was opened.
+      - name: closed_at
+        description: Timestamp when the issue was closed. Null if still open.
+      - name: is_closed
+        description: True if the issue has been closed.
+      - name: resolution_time_hours
+        description: Hours from issue creation to close. Null if still open.
+      - name: comment_count
+        description: Number of comments on the issue.
+      - name: labels
+        description: JSON array of labels applied to the issue.
+
+  - name: fact_issues_monthly
+    description: Monthly counts of issues opened and closed, with closed-to-opened ratio and MoM change. Excludes bots and the current incomplete month.
     columns:
       - name: month
-        description: First day of the month (timestamp truncated to month).
+        description: First timestamp of the month.
         tests:
           - not_null
           - unique
       - name: opened_count
-        description: Number of issues opened by humans during the month.
+        description: Number of issues opened during the month.
       - name: closed_count
-        description: Number of issues closed by humans during the month.
+        description: Number of issues closed during the month.
       - name: closed_to_opened_ratio
-        description: >
-          Ratio of closed to opened issues. Above 1 means more issues closed than opened (backlog shrinking).
-          Null if no issues were opened that month.
+        description: Ratio of closed to opened issues. Above 1 means the backlog is shrinking. Null if no issues were opened that month.
       - name: ratio_mom_change
-        description: >
-          Month-over-month change in closed_to_opened_ratio. Positive means improving, negative means degrading.
-          Null for the first month in the dataset.
+        description: Month-over-month change in closed_to_opened_ratio. Positive means improving. Null for the first month.
+
+  - name: fact_pull_requests_monthly
+    description: Monthly PR health trend. Covers merged, non-draft, non-bot PRs only. Excludes the current incomplete month.
+    columns:
+      - name: month
+        description: First timestamp of the month.
+        tests:
+          - not_null
+          - unique
+      - name: total_merged_prs
+        description: Number of PRs merged during the month.
+      - name: avg_cycle_time_hours
+        description: Average hours from PR creation to merge.
+      - name: cycle_time_mom_change
+        description: Month-over-month change in avg_cycle_time_hours. Negative means PRs are merging faster. Null for the first month.
+
+  - name: mart_contributor_concentration
+    description: Quarterly contributor concentration. How many contributors account for 80% of merged PRs. Excludes bots, drafts, and the current incomplete quarter.
+    columns:
+      - name: quarter
+        description: First timestamp of the quarter.
+        tests:
+          - not_null
+          - unique
+      - name: total_quarter_prs
+        description: Total merged PRs during the quarter.
+      - name: contributors_for_80pct
+        description: Minimum number of contributors needed to account for 80% of merged PRs. Lower means higher concentration and higher bus factor risk.
 
   - name: mart_contributor_activity
-    description: One row per human contributor with aggregated PR and issue activity.
-
+    description: One row per active human contributor with aggregated PR and issue activity.
     columns:
       - name: author_id
         description: GitHub numeric user ID.
@@ -65,12 +136,12 @@ models:
       - name: first_contribution_at
         description: Timestamp of the earliest contribution (commit or PR).
       - name: total_prs
-        description: Total number of non-draft pull requests opened by this contributor.
+        description: Total non-draft PRs opened by this contributor.
       - name: merged_prs
-        description: Number of pull requests merged.
+        description: Number of PRs merged.
       - name: merge_rate
         description: Share of PRs that were merged. Null if no PRs.
       - name: avg_cycle_time_hours
-        description: Average time in hours from PR creation to merge, for merged PRs only.
+        description: Average hours from PR creation to merge, for merged PRs only.
       - name: total_issues_opened
-        description: Total number of issues opened by this contributor.
+        description: Total issues opened by this contributor.

@@ -14,6 +14,10 @@ seeds:
   rituals_sae:
     +schema: raw
 
+vars:
+  # start date for KPIs calculation. 
+  start_date: '2023-01-01'
+
 models:
   rituals_sae:
     +static_analysis: strict

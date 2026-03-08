@@ -8,8 +8,5 @@ select
     merged_at,
     is_merged,
     cycle_time_hours,
-    commit_count,
-    lines_added,
-    lines_deleted,
-    files_changed
+    commit_count
 from {{ref('int_pull_requests')}}

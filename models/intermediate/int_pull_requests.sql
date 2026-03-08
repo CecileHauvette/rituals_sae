@@ -17,8 +17,5 @@ select
     merged_at,
     merged_at is not null as is_merged,
     timestamp_diff(merged_at, created_at, hour) as cycle_time_hours,
-    commit_count,
-    lines_added,
-    lines_deleted,
-    files_changed
+    commit_count
 from source

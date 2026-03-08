@@ -7,13 +7,14 @@ An end-to-end analytics pipeline tracking contribution activity on the [dbt-core
 **Stack**
 - **Ingestion**: Python script pulling from the GitHub REST API → BigQuery raw tables
 - **Transformation**: dbt (Fusion or Core)
-- **Destination**: BigQuery marts ready for analysis
+- **Destination**: BigQuery
 
 **What it tracks**
 - Commit, pull request, and issue activity since 2023
 - Contributor profiles (human vs bot, active vs inactive)
 - Monthly issue resolution health (open/close ratio, MoM trend)
-- Per-contributor PR throughput, merge rate, and cycle time
+- Monthly PR cycle time trend
+- Quarterly contributor concentration (bus factor)
 
 ---
 
@@ -68,3 +69,31 @@ dbt build
 ---
 
 ## III. Data model overview
+
+The core layer follows Kimball dimensional modeling (dims and facts). Denormalized marts sit on top for direct analysis.
+
+### Dimensions
+
+| Model | Grain | Primary key |
+|---|---|---|
+| `dim_contributors` | One row per GitHub user | `author_id` |
+
+### Facts
+
+| Model | Grain | Primary key |
+|---|---|---|
+| `fact_pull_requests` | One row per pull request | `pr_number` |
+| `fact_issues` | One row per issue | `issue_number` |
+| `fact_issues_monthly` | One row per calendar month | `month` |
+| `fact_pull_requests_monthly` | One row per calendar month | `month` |
+
+### Marts
+
+| Model | Grain | Primary key |
+|---|---|---|
+| `mart_contributor_concentration` | One row per quarter | `quarter` |
+| `mart_contributor_activity` | One row per active human contributor | `author_id` |
+
+### Lineage
+
+![lineage](images/lineage.png)

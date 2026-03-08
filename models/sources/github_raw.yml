@@ -11,7 +11,7 @@ sources:
           One row per commit ingested. 
         columns:
           - name: record_id
-            description: commit identifier. can have multiple rows per commit as the same commit can be ingested multiple times across script runs
+            description: commit identifier.
             tests:
               - not_null
           - name: data
@@ -30,16 +30,11 @@ sources:
       - name: raw_pull_requests
         identifier: raw_pull_requests
         description: >
-          One row per (PR, ingestion run) snapshot. Because the table uses
-          WRITE_APPEND, the same PR id can appear multiple times as its state
-          evolves; dbt staging models deduplicate by record_id keeping the
-          latest snapshot.
+          One row per (PR, ingestion run) snapshot. 
         columns:
           - name: record_id
             description: >
-              GitHub PR numeric id — unique within the repo. Not unique in this
-              table (multiple snapshots per PR); use with loaded_at to get
-              current state.
+              GitHub PR numeric id
             tests:
               - not_null
           - name: data
@@ -57,14 +52,11 @@ sources:
 
       - name: raw_issues
         description: >
-          One row per (issue, ingestion run) snapshot. GitHub PRs are excluded
-          at ingestion time. Same append-and-deduplicate pattern as
-          raw_pull_requests.
+          One row per (issue, ingestion run) snapshot.
         columns:
           - name: record_id
             description: >
-              GitHub issue numeric id — unique within the repo. Not unique in
-              this table (multiple snapshots per issue).
+              GitHub issue numeric id.
             tests:
               - not_null
           - name: data

@@ -1,7 +1,7 @@
 {{ config(materialized='ephemeral') }}
 
 -- One row per pull request, enriched with cycle time.
--- Grain: pr_number (unique).
+-- Grain: pr_number
 
 with source as (
     select * from {{ref('stg_github_pull_requests')}}

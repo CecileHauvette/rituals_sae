@@ -4,7 +4,7 @@
 -- Grain: one row per calendar month.
 
 -- Note: months with zero activity in both dimensions will not appear in results.
--- Todo: use a calendar table to ensure all months appear.
+-- TODO: use a calendar table to ensure all months appear.
 
 with opened as (
     select
@@ -44,5 +44,6 @@ select
         - lag(closed_to_opened_ratio) over (order by month)
         as ratio_mom_change
 from monthly
-where month >= '{{ var("start_date") }}'
-and month < timestamp_trunc(current_timestamp(), month)
+where 
+month >= '{{ var("start_date") }}' 
+and month < timestamp_trunc(current_timestamp(), month) -- exclude current month as it's incomplete

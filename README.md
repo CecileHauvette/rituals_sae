@@ -66,6 +66,22 @@ This writes three raw tables to BigQuery: `raw_commits`, `raw_pull_requests`, `r
 dbt build
 ```
 
+**5. (Optional) Generate and browse the project docs**
+
+Requires dbt Core with the BigQuery adapter installed (dbt Fusion does not support `docs generate`). If you don't have it:
+
+```bash
+pip install dbt-bigquery
+```
+
+Then:
+
+```bash
+dbt docs generate && dbt docs serve
+```
+
+This opens an interactive browser at `http://localhost:8080` with model descriptions, column definitions, and the lineage graph.
+
 ---
 
 ## III. Data model overview

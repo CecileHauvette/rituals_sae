@@ -33,7 +33,8 @@ select
     max(is_bot) as is_bot,
     min(contribution_at) as first_contribution_at,
     max(contribution_at) as last_contribution_at,
-    date(max(contribution_at)) >= date_sub(current_date(), interval 6 month) as is_active
+    --TODO: improve logic and/or make the number of months a variable
+    date(max(contribution_at)) >= date_sub(current_date(), interval 3 month) as is_active
 from unioned
 where author_id is not null
 group by all

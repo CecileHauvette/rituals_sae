@@ -1,5 +1,5 @@
 -- One row per issue, enriched with resolution status and time.
--- Grain: issue_number (unique).
+-- Grain: issue_number.
 
 with source as (
     select * from {{ref('stg_github_issues')}}

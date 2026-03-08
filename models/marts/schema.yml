@@ -22,7 +22,7 @@ models:
         tests:
           - not_null
       - name: is_active
-        description: True if the contributor has contributed in the last 6 months.
+        description: True if the contributor has contributed in the last 3 months.
 
   - name: fact_pull_requests
     description: One row per pull request.

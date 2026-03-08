@@ -1,6 +1,7 @@
 {{ config(materialized='table') }}
 
 -- Materialized as table (not view) to avoid re-parsing JSON on every downstream query.
+-- TODO: make incremental by issue_number.
 
 with source as (
     select * from {{source('github_raw', 'raw_issues')}}

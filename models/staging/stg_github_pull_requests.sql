@@ -1,6 +1,7 @@
 {{ config(materialized='table') }}
 
 -- Materialized as table (not view) to avoid re-parsing JSON on every downstream query.
+--TODO: make incremental by pr_number
 
 with source as (
     select * from {{source('github_raw', 'raw_pull_requests')}}
@@ -20,6 +21,5 @@ select
     json_value(data, '$.draft') = 'true' as is_draft,
     json_value(data, '$.number') as pr_number,
     json_value(data, '$.merge_commit_sha') as merge_commit_sha,
-    cast(json_value(data, '$.commits') as int64) as commit_count,
-    *
+    cast(json_value(data, '$.commits') as int64) as commit_count
 from source

@@ -1,5 +1,15 @@
 # dbt-core GitHub Activity Analytics
 
+## A note on AI use
+
+I used AI assistance in two areas of this project.
+
+For the ingestion script, I have limited Python experience and no prior experience with API pagination, so I relied on AI to write the code. The design choices — what to extract, how to handle incremental loads, and what to store — are mine. The implementation was AI-assisted.
+
+For the dbt project, the data model design, KPI definitions, and logic are entirely mine. I used AI for help with style consistency, naming, filling in repetitive parts of YAML files, generating markdown tables and documentation, error checking, and researching how the GitHub API response objects are structured.
+
+---
+
 ## I. Overview
 
 An end-to-end analytics pipeline tracking contribution activity on the [dbt-core](https://github.com/dbt-labs/dbt-core) open-source repository.
@@ -110,6 +120,91 @@ The core layer follows Kimball dimensional modeling (dims and facts). Denormaliz
 | `mart_contributor_concentration` | One row per quarter | `quarter` |
 | `mart_contributor_activity` | One row per active human contributor | `author_id` |
 
+---
+
+## IV. KPIs
+
+### KPI 1 — Issue resolution health (`fact_issues_monthly`)
+
+**Question:** Is the team keeping up with incoming issues?
+
+Each month, we count how many issues were opened and how many were closed. The ratio `closed / opened` tells us if the backlog is growing or shrinking:
+- Above 1 → more issues closed than opened (backlog shrinking)
+- Below 1 → more issues opened than closed (backlog growing)
+
+The month-over-month change shows whether things are improving or getting worse.
+
+Bots and the current (incomplete) month are excluded.
+
+---
+
+### KPI 2 — PR cycle time (`fact_pull_requests_monthly`)
+
+**Question:** How fast are pull requests being merged?
+
+For each month, we calculate the average time (in hours) between a PR being opened and being merged. A lower number means faster code review and integration.
+
+The month-over-month change flags acceleration or slowdown trends.
+
+Draft PRs, bot PRs, and the current month are excluded.
+
+---
+
+### KPI 3 — Contributor concentration (`mart_contributor_concentration`)
+
+**Question:** How many contributors does the project depend on?
+
+Each quarter, we rank contributors by number of merged PRs and find the minimum number of people who together account for 80% of all merged PRs. A lower number means higher concentration — the project depends heavily on a small group, which is a bus factor risk.
+
+Draft PRs, bot PRs, and the current (incomplete) quarter are excluded.
+
+---
+
 ### Lineage
 
 ![lineage](images/lineage.png)
+
+---
+
+## V. Design decisions, tradeoffs, and future improvements
+
+### Design decisions
+
+**Materialization**
+
+- **Staging → table.** Raw data is stored as JSON in BigQuery. Parsing it on every downstream query would be redundant, so staging models are materialized as tables to parse once and store the result. This is a deliberate override of the dbt default (views).
+- **Intermediate → view by default, ephemeral when consumed only once.** `int_issues` stays as a view because two downstream models read from it. The others (`int_pull_requests`, `int_contributors`, `int_issues_monthly`) are ephemeral — they are merged into the query that uses them and leave no table in the database.
+- **Marts and facts → table.** Final output models are materialized as tables for fast, direct querying.
+- **Partitioning and clustering** were considered but not applied. With a single repository since 2023, the tables are too small to benefit. If scaled to multiple repositories, partitioning on `created_at` and clustering on `author_id` would reduce query costs.
+
+**Layered architecture**
+The project follows the standard dbt layered approach: staging cleans and parses raw data, intermediate holds shared business logic reused across multiple models, and the marts layer is the final output.
+
+**Kimball structure**
+Within the marts layer, the project follows Kimball dimensional modeling: a single dimension (`dim_contributors`) and transaction facts (`fact_pull_requests`, `fact_issues`) with periodic snapshot facts for trend analysis (`fact_issues_monthly`, `fact_pull_requests_monthly`).
+
+Denormalized marts (`mart_contributor_concentration`, `mart_contributor_activity`) sit on top of these as ready-to-use aggregates.
+
+**Incomplete period exclusion**
+All KPIs exclude the current month or quarter, as partial periods would make trends misleading.
+
+---
+
+### Tradeoffs
+
+- **KPI 2 (cycle time) is noisy.** A single large PR can spike the monthly average. A median or p75 would be more robust, but average is easier to explain and still useful as a trend indicator.
+- **KPI 3 (80% threshold) is arbitrary.** The 80/20 rule is a common convention but not a hard standard. The threshold is hardcoded for now.
+- **Months with zero activity are missing.** If no issue was opened or closed in a given month, that month will not appear in `fact_issues_monthly`. A calendar spine would fix this.
+- **Bot exclusion is heuristic.** A contributor is flagged as a bot if the GitHub API type is `'Bot'` or the login contains `'bot'`. This catches most automated accounts but may miss some edge cases.
+- **PR size metrics are unavailable.** Lines added/deleted and files changed are only available from the individual PR endpoint, not the list endpoint used by the ingestion script.
+
+---
+
+### Future improvements
+
+- **Incremental staging models** — commits are immutable, PRs and issues change state. All three staging models could be made incremental to reduce build time and API calls.
+- **Calendar spine** — ensure all months appear in monthly aggregates, even with zero activity.
+- **Richer PR metrics** — call the individual PR endpoint to retrieve lines added/deleted and files changed.
+- **Configurable thresholds** — expose the `is_active` window and the 80% concentration threshold as dbt variables.
+- **Label-based issue segmentation** — break down issue counts by label (e.g. `bug`, `enhancement`) for more actionable insight.
+- **Multi-repo support** — add a `repo` dimension to track multiple repositories in the same pipeline, at which point partitioning and clustering on fact tables would become worthwhile.

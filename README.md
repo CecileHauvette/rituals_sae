@@ -20,11 +20,11 @@ An end-to-end analytics pipeline tracking contribution activity on the [dbt-core
 - **Destination**: BigQuery
 
 **What it tracks**
-- Commit, pull request, and issue activity since 2023
-- Contributor profiles (human vs bot, active vs inactive)
 - Monthly issue resolution health (open/close ratio, MoM trend)
 - Monthly PR cycle time trend
 - Quarterly contributor concentration (bus factor)
+- Commit, pull request, and issue activity (start date configurable, defaults to 2023)
+- Contributor profiles (human vs bot)
 
 ---
 
@@ -160,6 +160,10 @@ Draft PRs, bot PRs, and the current (incomplete) quarter are excluded.
 
 ---
 
+### Testing and documentation
+
+All primary keys are tested for uniqueness and non-null values. Every source table, staging model, and mart/fact column is documented in `schema.yml`. Descriptions are automatically propagated to BigQuery table and column metadata via `persist_docs`.
+
 ### Lineage
 
 ![lineage](images/lineage.png)
@@ -173,9 +177,12 @@ Draft PRs, bot PRs, and the current (incomplete) quarter are excluded.
 **Materialization**
 
 - **Staging → table.** Raw data is stored as JSON in BigQuery. Parsing it on every downstream query would be redundant, so staging models are materialized as tables to parse once and store the result. This is a deliberate override of the dbt default (views).
-- **Intermediate → view by default, ephemeral when consumed only once.** `int_issues` stays as a view because two downstream models read from it. The others (`int_pull_requests`, `int_contributors`, `int_issues_monthly`) are ephemeral — they are merged into the query that uses them and leave no table in the database.
+- **Intermediate → view by default, ephemeral when consumed only once.** `int_issues` stays as a view because two downstream models read from it. The others (`int_pull_requests`, `int_contributors`, `int_issues_monthly`) are ephemeral — they are merged into the query that uses them and leave no object in the database.
 - **Marts and facts → table.** Final output models are materialized as tables for fast, direct querying.
-- **Partitioning and clustering** were considered but not applied. With a single repository since 2023, the tables are too small to benefit. If scaled to multiple repositories, partitioning on `created_at` and clustering on `author_id` would reduce query costs.
+- **Partitioning and clustering** were considered but not applied. With a single repository since 2023, the tables are too small to benefit. If scaled to multiple repositories, `fact_pull_requests` would partition on `merged_at`, `fact_issues` on `created_at`, both clustered on `author_id`.
+
+**Raw table design**
+All three raw tables are partitioned by `loaded_at` (day) and clustered by `record_id`. This makes deduplication queries in dbt cheaper and prepares the tables for incremental loading.
 
 **Layered architecture**
 The project follows the standard dbt layered approach: staging cleans and parses raw data, intermediate holds shared business logic reused across multiple models, and the marts layer is the final output.
@@ -188,23 +195,27 @@ Denormalized marts (`mart_contributor_concentration`, `mart_contributor_activity
 **Incomplete period exclusion**
 All KPIs exclude the current month or quarter, as partial periods would make trends misleading.
 
+**Testing strategy**
+Tests are applied at two levels: staging (where data enters the pipeline) and marts (where data is consumed). Primary keys are tested for uniqueness and non-null values at both levels. Testing at staging catches bad raw data early; testing at marts catches logic errors introduced during transformation. Intermediate models are not tested directly as they are ephemeral and covered by downstream mart tests.
+
 ---
 
 ### Tradeoffs
 
-- **KPI 2 (cycle time) is noisy.** A single large PR can spike the monthly average. A median or p75 would be more robust, but average is easier to explain and still useful as a trend indicator.
+- **KPI 2 (cycle time) is noisy.** A single large PR can spike the monthly average. PR size metrics (lines changed) would help distinguish a slow month from a month with unusually large PRs, but they are not available from the list API endpoint.
 - **KPI 3 (80% threshold) is arbitrary.** The 80/20 rule is a common convention but not a hard standard. The threshold is hardcoded for now.
-- **Months with zero activity are missing.** If no issue was opened or closed in a given month, that month will not appear in `fact_issues_monthly`. A calendar spine would fix this.
+- **Months with zero activity are missing.** If no issue was opened or closed in a given month, that month will not appear in `fact_issues_monthly`. A dim_date would fix this.
 - **Bot exclusion is heuristic.** A contributor is flagged as a bot if the GitHub API type is `'Bot'` or the login contains `'bot'`. This catches most automated accounts but may miss some edge cases.
-- **PR size metrics are unavailable.** Lines added/deleted and files changed are only available from the individual PR endpoint, not the list endpoint used by the ingestion script.
+- **`dim_contributors` only covers code contributors.** It is built from commits and pull requests, not issues. People who only opened issues have no entry in `dim_contributors`, so `fact_issues` cannot be fully enriched with contributor attributes. A proper solution would build a separate `dim_users` from all three activity types.
 
 ---
 
 ### Future improvements
 
-- **Incremental staging models** — commits are immutable, PRs and issues change state. All three staging models could be made incremental to reduce build time and API calls.
-- **Calendar spine** — ensure all months appear in monthly aggregates, even with zero activity.
+- **Incremental staging models** — commits PRs and issues staging models could be made incremental to reduce build time and API calls.
+- **Calendar (dim_date)** — ensure all months appear in monthly aggregates, even with zero activity.
 - **Richer PR metrics** — call the individual PR endpoint to retrieve lines added/deleted and files changed.
+- **Source freshness** — add freshness checks on raw tables so stale data is detected before the pipeline runs.
 - **Configurable thresholds** — expose the `is_active` window and the 80% concentration threshold as dbt variables.
 - **Label-based issue segmentation** — break down issue counts by label (e.g. `bug`, `enhancement`) for more actionable insight.
 - **Multi-repo support** — add a `repo` dimension to track multiple repositories in the same pipeline, at which point partitioning and clustering on fact tables would become worthwhile.

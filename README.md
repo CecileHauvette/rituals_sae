@@ -1,5 +1,16 @@
 # dbt-core GitHub Activity Analytics
 
+## Contents
+
+- [I. Overview](#i-overview)
+- [II. Setup](#ii-setup)
+- [III. Data model overview](#iii-data-model-overview)
+- [IV. KPIs](#iv-kpis)
+- [V. Design decisions, tradeoffs, and future improvements](#v-design-decisions-tradeoffs-and-future-improvements)
+- [VI. Analytical summary](#vi-analytical-summary)
+
+---
+
 ## A note on AI use
 
 I used AI assistance in two areas of this project.
@@ -62,7 +73,26 @@ SINCE=2023-01-01          # load data from this date onward
 pip install -r requirements.txt
 ```
 
-**3. Load raw data from the GitHub API**
+**3. Configure the dbt profile**
+
+Add the following profile to `~/.dbt/profiles.yml` (create the file if it doesn't exist):
+
+```yaml
+rituals_sae:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      database: your-gcp-project-id
+      schema: your-bigquery-dataset
+      threads: 4
+      location: EU
+```
+
+The `database` and `schema` values must match `GCP_PROJECT` and `BQ_DATASET` in your `.env`.
+
+**4. Load raw data from the GitHub API**
 
 ```bash
 python scripts/load_github_activity.py
@@ -70,13 +100,13 @@ python scripts/load_github_activity.py
 
 This writes three raw tables to BigQuery: `raw_commits`, `raw_pull_requests`, `raw_issues`. The script is incremental — re-running it only fetches new activity.
 
-**4. Run the dbt project**
+**5. Run the dbt project**
 
 ```bash
 dbt build
 ```
 
-**5. (Optional) Generate and browse the project docs**
+**6. (Optional) Generate and browse the project docs**
 
 Requires dbt Core with the BigQuery adapter installed (dbt Fusion does not support `docs generate`). If you don't have it:
 
@@ -96,7 +126,7 @@ This opens an interactive browser at `http://localhost:8080` with model descript
 
 ## III. Data model overview
 
-The core layer follows Kimball dimensional modeling (dims and facts). Denormalized marts sit on top for direct analysis.
+The project follows a standard dbt layered architecture (staging → intermediate → marts) with Kimball dimensional modeling in the marts layer. See [section V](#v-design-decisions-tradeoffs-and-future-improvements) for details on these choices.
 
 ### Dimensions
 
@@ -119,6 +149,14 @@ The core layer follows Kimball dimensional modeling (dims and facts). Denormaliz
 |---|---|---|
 | `mart_contributor_concentration` | One row per quarter | `quarter` |
 | `mart_contributor_activity` | One row per active human contributor | `author_id` |
+
+### Testing and documentation
+
+All primary keys are tested for uniqueness and non-null values. Every source table, staging model, and mart/fact column is documented in `schema.yml`. Descriptions are automatically propagated to BigQuery table and column metadata via `persist_docs`.
+
+### Lineage
+
+![lineage](images/lineage.png)
 
 ---
 
@@ -160,16 +198,6 @@ Draft PRs, bot PRs, and the current (incomplete) quarter are excluded.
 
 ---
 
-### Testing and documentation
-
-All primary keys are tested for uniqueness and non-null values. Every source table, staging model, and mart/fact column is documented in `schema.yml`. Descriptions are automatically propagated to BigQuery table and column metadata via `persist_docs`.
-
-### Lineage
-
-![lineage](images/lineage.png)
-
----
-
 ## V. Design decisions, tradeoffs, and future improvements
 
 ### Design decisions
@@ -185,12 +213,10 @@ All primary keys are tested for uniqueness and non-null values. Every source tab
 All three raw tables are partitioned by `loaded_at` (day) and clustered by `record_id`. This makes deduplication queries in dbt cheaper and prepares the tables for incremental loading.
 
 **Layered architecture**
-The project follows the standard dbt layered approach: staging cleans and parses raw data, intermediate holds shared business logic reused across multiple models, and the marts layer is the final output.
+Staging cleans and parses raw data, intermediate holds shared business logic reused across multiple models, and the marts layer is the final output.
 
 **Kimball structure**
-Within the marts layer, the project follows Kimball dimensional modeling: a single dimension (`dim_contributors`) and transaction facts (`fact_pull_requests`, `fact_issues`) with periodic snapshot facts for trend analysis (`fact_issues_monthly`, `fact_pull_requests_monthly`).
-
-Denormalized marts (`mart_contributor_concentration`, `mart_contributor_activity`) sit on top of these as ready-to-use aggregates.
+Within the marts layer: a single dimension (`dim_contributors`), transaction facts (`fact_pull_requests`, `fact_issues`), and periodic snapshot facts for trend analysis (`fact_issues_monthly`, `fact_pull_requests_monthly`). Denormalized marts (`mart_contributor_concentration`, `mart_contributor_activity`) sit on top as ready-to-use aggregates.
 
 **Incomplete period exclusion**
 All KPIs exclude the current month or quarter, as partial periods would make trends misleading.
@@ -219,3 +245,52 @@ Tests are applied at two levels: staging (where data enters the pipeline) and ma
 - **Configurable thresholds** — expose the `is_active` window and the 80% concentration threshold as dbt variables.
 - **Label-based issue segmentation** — break down issue counts by label (e.g. `bug`, `enhancement`) for more actionable insight.
 - **Multi-repo support** — add a `repo` dimension to track multiple repositories in the same pipeline, at which point partitioning and clustering on fact tables would become worthwhile.
+
+---
+
+## VI. Analytical summary
+
+### KPI 1 — Issue resolution health (last 6 months)
+
+| Month | Opened | Closed | Ratio | MoM change |
+|---|---|---|---|---|
+| Feb 2026 | 36 | 65 | 1.81 | +1.55 |
+| Jan 2026 | 35 | 9 | 0.26 | -1.69 |
+| Dec 2025 | 18 | 35 | 1.94 | +0.39 |
+| Nov 2025 | 29 | 45 | 1.55 | +1.11 |
+| Oct 2025 | 34 | 15 | 0.44 | -0.08 |
+| Sep 2025 | 40 | 21 | 0.53 | -0.05 |
+
+Sep–Oct showed a growing backlog (ratio below 1). Nov–Dec recovered strongly. January dropped sharply — not a general team slowdown (PR activity remained normal) but resolving issues was possibly deprioritized that month. February rebounded with 65 closures, 28 of which happened on Feb 26–27 in a coordinated effort involving 26 contributors.
+
+---
+
+### KPI 2 — PR cycle time (last 6 months)
+
+| Month | Merged PRs | Avg cycle time (h) | MoM change (h) |
+|---|---|---|---|
+| Feb 2026 | 53 | 109.5 | -77.2 |
+| Jan 2026 | 30 | 186.7 | -70.3 |
+| Dec 2025 | 46 | 257.0 | +179.5 |
+| Nov 2025 | 36 | 77.5 | +47.3 |
+| Oct 2025 | 20 | 30.1 | -44.1 |
+| Sep 2025 | 25 | 74.3 | -20.9 |
+
+December's spike (257h average, ~10 days) likely reflects the holiday slowdown — PRs opened in autumn sat unreviewed over the break and were merged in bulk in December. Cycle time has been improving steadily since, down to 110h in February.
+
+---
+
+### KPI 3 — Contributor concentration (last 8 quarters)
+
+| Quarter | Merged PRs | Contributors | For 80% |
+|---|---|---|---|
+| Q4 2025 | 102 | 15 | 3 |
+| Q3 2025 | 67 | 12 | 3 |
+| Q2 2025 | 120 | 21 | 5 |
+| Q1 2025 | 64 | 17 | 7 |
+| Q4 2024 | 105 | 23 | 7 |
+| Q3 2024 | 125 | 23 | 7 |
+| Q2 2024 | 202 | 25 | 6 |
+| Q1 2024 | 146 | 22 | 6 |
+
+Two trends are visible: total contributors dropped from ~25 in 2024 to 12–15 in late 2025, and concentration increased — only 3 people now account for 80% of merged PRs, down from 6–7 in 2024. Combined with the overall decline in PR volume (809 merged PRs in 2023 vs 353 in 2025), this suggests dbt-core is transitioning to maintenance mode, with a small dedicated core team keeping the project alive while broader community activity shifts toward dbt Fusion.

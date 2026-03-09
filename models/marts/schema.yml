@@ -120,6 +120,8 @@ models:
           - unique
       - name: total_quarter_prs
         description: Total merged PRs during the quarter.
+      - name: total_contributors
+        description: Total number of distinct contributors who merged at least one PR during the quarter.
       - name: contributors_for_80pct
         description: Minimum number of contributors needed to account for 80% of merged PRs. Lower means higher concentration and higher bus factor risk.
 

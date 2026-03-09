@@ -20,6 +20,7 @@ ranked as (
         author_id,
         merged_prs,
         sum(merged_prs) over (partition by quarter) as total_quarter_prs,
+        count(*) over (partition by quarter) as total_contributors,
         sum(merged_prs) over (partition by quarter order by merged_prs desc) as running_prs,
         row_number() over (partition by quarter order by merged_prs desc) as contributor_rank
     from contributor_prs
@@ -27,6 +28,7 @@ ranked as (
 select
     quarter,
     total_quarter_prs,
+    max(total_contributors) as total_contributors,
     min(contributor_rank) as contributors_for_80pct
 from ranked
 where safe_divide(running_prs, total_quarter_prs) >= 0.8

@@ -2,7 +2,7 @@ sources:
   - name: github_raw
     description: >
       Raw GitHub API payloads for the dbt-labs/dbt-core repository
-    database: rituals-case
+    database: ritualscase
     schema: github_raw
     tables:
       - name: raw_commits

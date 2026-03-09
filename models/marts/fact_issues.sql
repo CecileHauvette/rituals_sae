@@ -1,3 +1,5 @@
+-- One row per issue in the dbt-core repository.
+
 select
     issue_number,
     author_id,

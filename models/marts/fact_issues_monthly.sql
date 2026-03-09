@@ -1,3 +1,5 @@
+-- One row per calendar month with issue resolution counts and ratio.
+
 select
     month,
     opened_count,

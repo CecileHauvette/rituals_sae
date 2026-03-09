@@ -1,5 +1,6 @@
 {{ config(materialized='table') }}
 
+-- One row per pull request in the dbt-core repository.
 -- Materialized as table (not view) to avoid re-parsing JSON on every downstream query.
 --TODO: make incremental by pr_number
 

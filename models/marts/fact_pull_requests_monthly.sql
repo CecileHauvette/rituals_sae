@@ -1,5 +1,4 @@
--- Monthly PR health trend: cycle time, volume, and average size for merged PRs.
--- Grain: one row per calendar month.
+-- One row per calendar month with PR volume and average cycle time.
 
 with relevant_prs as (
     select *

@@ -1,3 +1,5 @@
+-- One row per pull request in the dbt-core repository.
+
 select
     pr_number,
     author_id,

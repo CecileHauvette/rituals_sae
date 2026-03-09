@@ -1,5 +1,6 @@
 {{ config(materialized='table') }}
 
+-- One row per issue in the dbt-core repository.
 -- Materialized as table (not view) to avoid re-parsing JSON on every downstream query.
 -- TODO: make incremental by issue_number.
 

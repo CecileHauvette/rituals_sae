@@ -1,3 +1,5 @@
+-- One row per GitHub contributor to the repository.
+
 select
     author_id,
     author_login,

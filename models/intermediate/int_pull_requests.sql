@@ -1,5 +1,3 @@
-{{ config(materialized='ephemeral') }}
-
 -- One row per pull request, enriched with cycle time.
 -- Grain: pr_number
 

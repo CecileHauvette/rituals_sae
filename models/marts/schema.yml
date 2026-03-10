@@ -79,7 +79,7 @@ models:
         description: JSON array of labels applied to the issue.
 
   - name: fact_issues_monthly
-    description: Monthly counts of issues opened and closed, with closed-to-opened ratio and MoM change. Excludes bots and the current incomplete month.
+    description: Monthly counts of issues opened and closed, with closed-to-opened ratio and MoM change. Excludes the current incomplete month.
     columns:
       - name: month
         description: First timestamp of the month.

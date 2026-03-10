@@ -172,7 +172,7 @@ Each month, we count how many issues were opened and how many were closed. The r
 
 The month-over-month change shows whether things are improving or getting worse.
 
-Bots and the current (incomplete) month are excluded.
+The current (incomplete) month is excluded. Bot-opened issues are included — they represent real work for the team regardless of origin, and bot activity is negligible (27 out of ~3300 issues).
 
 ---
 
@@ -205,7 +205,7 @@ Draft PRs, bot PRs, and the current (incomplete) quarter are excluded.
 **Materialization**
 
 - **Staging → table.** Raw data is stored as JSON in BigQuery. Parsing it on every downstream query would be redundant, so staging models are materialized as tables to parse once and store the result. This is a deliberate override of the dbt default (views).
-- **Intermediate → view by default, ephemeral when consumed only once.** `int_issues` stays as a view because two downstream models read from it. The others (`int_pull_requests`, `int_contributors`, `int_issues_monthly`) are ephemeral — they are merged into the query that uses them and leave no object in the database.
+- **Intermediate → view by default, ephemeral when consumed only once.** `int_issues` and `int_pull_requests` are views because two downstream models read from each. The others (`int_contributors`, `int_issues_monthly`, `int_pull_requests_monthly`) are ephemeral — they are merged into the query that uses them and leave no object in the database.
 - **Marts and facts → table.** Final output models are materialized as tables for fast, direct querying.
 - **Partitioning and clustering** were considered but not applied. With a single repository since 2023, the tables are too small to benefit. If scaled to multiple repositories, `fact_pull_requests` would partition on `merged_at`, `fact_issues` on `created_at`, both clustered on `author_id`.
 
@@ -231,7 +231,7 @@ Tests are applied at two levels: staging (where data enters the pipeline) and ma
 - **KPI 2 (cycle time) is noisy.** A single large PR can spike the monthly average. PR size metrics (lines changed) would help distinguish a slow month from a month with unusually large PRs, but they are not available from the list API endpoint.
 - **KPI 3 (80% threshold) is arbitrary.** The 80/20 rule is a common convention but not a hard standard. The threshold is hardcoded for now.
 - **Months with zero activity are missing.** If no issue was opened or closed in a given month, that month will not appear in `fact_issues_monthly`. A dim_date would fix this.
-- **Bot exclusion is heuristic.** A contributor is flagged as a bot if the GitHub API type is `'Bot'` or the login contains `'bot'`. This catches most automated accounts but may miss some edge cases.
+- **Bot exclusion is heuristic.** A contributor is flagged as a bot if the GitHub API type is `'Bot'` or the login contains `'bot'`. This catches most automated accounts but may miss some edge cases. Bot-opened issues are intentionally included in `fact_issues_monthly` — they represent real team workload and are negligible in volume (27 out of ~3300 issues).
 - **`dim_contributors` only covers code contributors.** It is built from commits and pull requests, not issues. People who only opened issues have no entry in `dim_contributors`, so `fact_issues` cannot be fully enriched with contributor attributes. A proper solution would build a separate `dim_users` from all three activity types.
 
 ---

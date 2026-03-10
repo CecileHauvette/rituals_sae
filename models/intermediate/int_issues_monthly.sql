@@ -11,7 +11,6 @@ with opened as (
         timestamp_trunc(created_at, month) as month,
         count(*) as opened_count
     from {{ref('int_issues')}}
-    where not is_bot
     group by all
 ),
 
@@ -21,7 +20,6 @@ closed as (
         count(*) as closed_count
     from {{ref('int_issues')}}
     where is_closed
-    and not is_bot
     group by all
 ),
 

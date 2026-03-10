@@ -285,12 +285,12 @@ December's spike (257h average, ~10 days) likely reflects the holiday slowdown �
 | Quarter | Merged PRs | Contributors | For 80% |
 |---|---|---|---|
 | Q4 2025 | 102 | 15 | 3 |
-| Q3 2025 | 67 | 12 | 3 |
-| Q2 2025 | 120 | 21 | 5 |
+| Q3 2025 | 67 | 12 | 4 |
+| Q2 2025 | 120 | 21 | 6 |
 | Q1 2025 | 64 | 17 | 7 |
 | Q4 2024 | 105 | 23 | 7 |
-| Q3 2024 | 125 | 23 | 7 |
+| Q3 2024 | 125 | 23 | 8 |
 | Q2 2024 | 202 | 25 | 6 |
-| Q1 2024 | 146 | 22 | 6 |
+| Q1 2024 | 146 | 22 | 7 |
 
-Two trends are visible: total contributors dropped from ~25 in 2024 to 12–15 in late 2025, and concentration increased — only 3 people now account for 80% of merged PRs, down from 6–7 in 2024. Combined with the overall decline in PR volume (809 merged PRs in 2023 vs 353 in 2025), this suggests dbt-core is transitioning to maintenance mode, with a small dedicated core team keeping the project alive while broader community activity shifts toward dbt Fusion.
+Two trends are visible: total contributors dropped from ~25 in 2024 to 12–15 in late 2025, and concentration increased — only 3 people now account for 80% of merged PRs, down from 6–8 in 2024. Combined with the overall decline in PR volume (809 merged PRs in 2023 vs 353 in 2025), this suggests dbt-core is transitioning to maintenance mode, with a small dedicated core team keeping the project alive while broader community activity shifts toward dbt Fusion.

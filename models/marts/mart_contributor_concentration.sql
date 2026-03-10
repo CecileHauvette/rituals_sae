@@ -21,7 +21,7 @@ ranked as (
         merged_prs,
         sum(merged_prs) over (partition by quarter) as total_quarter_prs,
         count(*) over (partition by quarter) as total_contributors,
-        sum(merged_prs) over (partition by quarter order by merged_prs desc) as running_prs,
+        sum(merged_prs) over (partition by quarter order by merged_prs desc rows between unbounded preceding and current row) as running_prs,
         row_number() over (partition by quarter order by merged_prs desc) as contributor_rank
     from contributor_prs
 )
